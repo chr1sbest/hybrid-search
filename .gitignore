@@ -1,0 +1,6 @@
+# Vendored dependencies
+# Vendored dependencies
+/vendor/
+
+# Environment variables
+.env
