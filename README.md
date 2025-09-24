@@ -53,14 +53,25 @@ To improve performance, the application queries both Elasticsearch and Pinecone 
 
 ```
 .
-├── main.go                # Entrypoint, sets up clients and HTTP server.
-├── handlers.go            # Defines the HTTP handlers for /store and /query.
-├── search_service.go      # Orchestrates the hybrid search logic.
-├── ranking.go             # Implements the Reciprocal Rank Fusion (RRF) algorithm.
-├── stores.go              # Defines the VectorStore and TextStore interfaces.
-├── elasticsearch_client.go  # Elasticsearch implementation of the TextStore interface.
-├── pinecone_client.go       # Pinecone implementation of the VectorStore interface.
-└── models.go              # Defines the core Document data structure.
+├── cmd/app/
+│   └── main.go              # Application entrypoint
+├── pkg/
+│   ├── handlers/
+│   │   └── handlers.go      # HTTP handlers
+│   ├── ranking/
+│   │   └── ranking.go       # RRF implementation
+│   ├── search/
+│   │   └── service.go       # Hybrid search orchestration
+│   └── storage/
+│       ├── elasticsearch.go # Elasticsearch client
+│       ├── pinecone.go      # Pinecone client
+│       ├── stores.go        # Store interfaces
+│       └── models.go        # Core data models
+├── .env
+├── .gitignore
+├── go.mod
+├── go.sum
+└── README.md
 ```
 
 ## How to Run This Project
@@ -79,19 +90,20 @@ This project uses Docker to run an Elasticsearch instance locally. The `xpack.se
 docker run -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.14.1
 ```
 
-### 2. Set Environment Variables
+### 2. Create a .env File
 
-You need to provide your Pinecone API key. You can get one from the [Pinecone console](https://app.pinecone.io/).
+Create a `.env` file in the root of the project and add your Pinecone API key. You can get one from the [Pinecone console](https://app.pinecone.io/).
 
-```sh
-export PINECONE_API_KEY="YOUR_API_KEY_HERE"
+```
+# .env
+PINECONE_API_KEY="YOUR_API_KEY_HERE"
 ```
 
 ### 3. Run the Go Application
 
 ```sh
 go mod tidy
-go run .
+go run ./cmd/app
 ```
 
 The server will start on `http://localhost:8080`.
