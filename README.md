@@ -12,7 +12,24 @@ This project is a Go application that demonstrates a complete, end-to-end hybrid
 
 ### Setup
 
-1.  **Start Services**:
+1.  **Set up Pinecone**:
+
+    -   Create a [Pinecone account](https://app.pinecone.io/) and retrieve your API key.
+    -   Create a new index with the following specifications:
+        -   **Name**: `semantic-search-api` (or a name of your choice).
+        -   **Embedding Model**: Use the integrated `llama-text-embed-v2` model.
+
+2.  **Configure Environment**:
+
+    Create a `.env` file in the project root. Add your Pinecone API key and, if you chose a custom index name, update `PINECONE_INDEX_NAME`.
+
+    ```sh
+    # .env
+    PINECONE_API_KEY="YOUR_API_KEY_HERE"
+    PINECONE_INDEX_NAME="semantic-search-api"
+    ```
+
+3.  **Start Services**:
 
     The entire application stack (Go service and Elasticsearch) is managed with Docker Compose.
 
@@ -21,16 +38,6 @@ This project is a Go application that demonstrates a complete, end-to-end hybrid
     ```
 
     This command will build the application image, start the services, and stream the logs to your terminal. You can run it in the background with `docker-compose up -d`.
-
-2.  **Configure Environment**:
-
-    Create a `.env` file in the project root:
-
-    ```sh
-    # .env
-    PINECONE_API_KEY="YOUR_API_KEY_HERE"
-    ```
-
 
 ## Development
 
