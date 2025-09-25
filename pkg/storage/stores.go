@@ -11,8 +11,13 @@ type SearchResult struct {
 // VectorStore defines the interface for vector database operations.
 // This allows for semantic search capabilities.
 type VectorStore interface {
-	Upsert(ctx context.Context, doc Document) error
-	Query(ctx context.Context, queryText string, topK int) ([]SearchResult, error)
+	// Upsert adds or updates a document. It may receive a pre-computed vector.
+	// If the vector is nil, the store is expected to generate it internally.
+	Upsert(ctx context.Context, doc Document, vector []float32) error
+
+	// Query searches for documents. It may receive a pre-computed query vector.
+	// If the queryVector is nil, the store is expected to generate it from the queryText.
+	Query(ctx context.Context, queryText string, queryVector []float32, topK int) ([]SearchResult, error)
 }
 
 // TextStore defines the interface for text-based search operations.

@@ -8,6 +8,7 @@ import (
 )
 
 // PineconeClient wraps the Pinecone index connection and implements the VectorStore interface.
+// This implementation is for an index with an INTEGRATED embedding model.
 type PineconeClient struct {
 	idxConn *pinecone.IndexConnection
 }
@@ -34,8 +35,9 @@ func NewPineconeClient(ctx context.Context, apiKey, indexName string) (*Pinecone
 	return &PineconeClient{idxConn: idxConn}, nil
 }
 
-// Upsert adds or updates a document in the Pinecone index.
-func (c *PineconeClient) Upsert(ctx context.Context, doc Document) error {
+// Upsert uses the integrated embedding model to add or update a document.
+// It IGNORES the pre-computed vector argument to satisfy the VectorStore interface.
+func (c *PineconeClient) Upsert(ctx context.Context, doc Document, vector []float32) error {
 	records := []*pinecone.IntegratedRecord{
 		{"_id": doc.DocumentID, "chunk_text": doc.Text},
 	}
@@ -46,9 +48,9 @@ func (c *PineconeClient) Upsert(ctx context.Context, doc Document) error {
 	return nil
 }
 
-// Query performs a semantic search on the Pinecone index.
-func (c *PineconeClient) Query(ctx context.Context, queryText string, topK int) ([]SearchResult, error) {
-
+// Query uses the integrated embedding model to perform a semantic search.
+// It IGNORES the pre-computed queryVector argument to satisfy the VectorStore interface.
+func (c *PineconeClient) Query(ctx context.Context, queryText string, queryVector []float32, topK int) ([]SearchResult, error) {
 	res, err := c.idxConn.SearchRecords(ctx, &pinecone.SearchRecordsRequest{
 		Query: pinecone.SearchRecordsQuery{
 			TopK: int32(topK),
@@ -63,18 +65,20 @@ func (c *PineconeClient) Query(ctx context.Context, queryText string, topK int) 
 	}
 
 	var results []SearchResult
-	for _, hit := range res.Result.Hits {
-		var text string
-		if chunkText, ok := hit.Fields["chunk_text"]; ok {
-			text = chunkText.(string)
+	if res != nil {
+		for _, hit := range res.Result.Hits {
+			var text string
+			if chunkText, ok := hit.Fields["chunk_text"]; ok {
+				text = chunkText.(string)
+			}
+			results = append(results, SearchResult{
+				Document: Document{
+					DocumentID: hit.Id,
+					Text:       text,
+				},
+				Score:    float64(hit.Score),
+			})
 		}
-		results = append(results, SearchResult{
-			Document: Document{
-				DocumentID: hit.Id,
-				Text:       text,
-			},
-			Score:    float64(hit.Score),
-		})
 	}
 
 	return results, nil

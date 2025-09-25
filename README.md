@@ -38,14 +38,24 @@ RRF_Score = Σ (1 / (k + rank_i))
 - **Score-Agnostic**: Different search systems produce scores on different scales. RRF elegantly sidesteps the need to normalize these scores.
 - **Rewards Prominence**: It gives significant weight to documents that appear at the top of *any* list, assuming that a top result from any system is likely to be highly relevant.
 
-### 3. Modular Architecture with Interfaces
+### 3. Document Chunking for Large Texts
 
-The application is designed with a clean separation of concerns using Go interfaces (`VectorStore` and `TextStore`).
+**What is it?**
+Embedding models have a fixed context window, meaning they can only process a certain amount of text at once. To handle large documents, we first split them into smaller, semantically coherent pieces called **chunks**.
+
+- **Implementation**: We use the `RecursiveCharacter` text splitter from the `langchaingo` library, a robust implementation of a common and effective chunking algorithm.
+
+**Why use it?**
+Chunking improves search relevance. Instead of a single, diluted vector for a large document, we get multiple, focused vectors for each chunk. A specific user query for "how to change a headlight bulb" will have a much stronger match with a specific chunk about headlights than with a general vector for an entire car maintenance manual.
+
+### 4. Pluggable Architecture with Interfaces
+
+The application is designed with a clean separation of concerns using Go interfaces (`EmbeddingClient`, `VectorStore`, and `TextStore`).
 
 - `search_service.go` orchestrates the search, but it doesn't know or care *which* vector database or text engine is being used. It only knows about the interfaces.
-- This makes the system **extensible**. You could easily swap `Pinecone` for another vector DB like `Weaviate` or `Elasticsearch` for `OpenSearch` by simply creating a new client that satisfies the interface.
+- This makes the system **extensible**. You can easily swap `Pinecone` for another vector DB like `Weaviate`, `Elasticsearch` for `OpenSearch`, or the internal embedding model for an external one like `OpenAI` by simply creating a new client that satisfies the appropriate interface.
 
-### 4. Concurrent Operations
+### 5. Concurrent Operations
 
 To improve performance, the application queries both Elasticsearch and Pinecone **concurrently** using an `errgroup`. This means the total time for the search phase is determined by the *slower* of the two datastores, not the sum of both.
 
@@ -56,6 +66,10 @@ To improve performance, the application queries both Elasticsearch and Pinecone 
 ├── cmd/app/
 │   └── main.go              # Application entrypoint
 ├── pkg/
+│   ├── chunker/
+│   │   └── chunker.go       # Text chunking logic
+│   ├── embeddings/
+│   │   └── embeddings.go    # Embedding client interface
 │   ├── handlers/
 │   │   └── handlers.go      # HTTP handlers
 │   ├── ranking/

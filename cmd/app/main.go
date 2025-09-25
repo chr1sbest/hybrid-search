@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/chr1sbest/hybrid-search/pkg/embeddings"
 	"github.com/chr1sbest/hybrid-search/pkg/handlers"
 	"github.com/chr1sbest/hybrid-search/pkg/search"
 	"github.com/chr1sbest/hybrid-search/pkg/storage"
@@ -38,12 +39,15 @@ func main() {
 		log.Fatalf("Failed to create Elasticsearch client: %v", err)
 	}
 
-	searchService := search.NewSearchService(vectorStore, textStore)
+	embeddingClient := embeddings.NewPassthroughEmbeddingService()
+
+	searchService := search.NewSearchService(embeddingClient, vectorStore, textStore)
 
 	env := &handlers.Env{
-		VectorStore:   vectorStore,
-		TextStore:     textStore,
-		SearchService: searchService,
+		EmbeddingClient: embeddingClient,
+		VectorStore:     vectorStore,
+		TextStore:       textStore,
+		SearchService:   searchService,
 	}
 
 	http.HandleFunc("/store", env.StoreHandler)

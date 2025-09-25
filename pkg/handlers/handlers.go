@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/chr1sbest/hybrid-search/pkg/chunker"
+	"github.com/chr1sbest/hybrid-search/pkg/embeddings"
 	"github.com/chr1sbest/hybrid-search/pkg/search"
 	"github.com/chr1sbest/hybrid-search/pkg/storage"
 	"github.com/google/uuid"
@@ -13,9 +15,10 @@ import (
 
 // Env holds application-wide dependencies.
 type Env struct {
-	VectorStore   storage.VectorStore
-	TextStore     storage.TextStore
-	SearchService *search.SearchService
+	EmbeddingClient embeddings.EmbeddingClient
+	VectorStore     storage.VectorStore
+	TextStore       storage.TextStore
+	SearchService   *search.SearchService
 }
 
 func (env *Env) StoreHandler(w http.ResponseWriter, r *http.Request) {
@@ -38,32 +41,56 @@ func (env *Env) StoreHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	doc := storage.Document{
-		DocumentID: uuid.New().String(),
-		Text:       reqBody.Text,
-	}
-
-	// Upsert to both stores concurrently
 	ctx := r.Context()
+	parentDocID := uuid.New().String()
+
+	// 1. Create chunks from the document text.
+	// Using 512 for chunk size and 50 for overlap as a starting point.
+	chunkr := chunker.NewChunker(512, 50)
+	chunks := chunkr.Chunk(reqBody.Text, parentDocID)
+
+	// 2. Index the full document in the text store and the chunks in the vector store concurrently.
 	var g errgroup.Group
 
+	// Index the original, full-text document in Elasticsearch.
 	g.Go(func() error {
-		return env.VectorStore.Upsert(ctx, doc)
+		parentDoc := storage.Document{
+			DocumentID: parentDocID,
+			Text:       reqBody.Text,
+		}
+		return env.TextStore.Index(ctx, parentDoc)
 	})
 
+	// Process and upsert all chunks to the vector store.
 	g.Go(func() error {
-		return env.TextStore.Index(ctx, doc)
+		for _, chunk := range chunks {
+			// Create the embedding for the chunk.
+			vector, err := env.EmbeddingClient.CreateEmbedding(ctx, chunk.Text)
+			if err != nil {
+				// In a real app, you might want more robust error handling, like a retry.
+				log.Printf("Failed to create embedding for chunk %s: %v", chunk.DocumentID, err)
+				continue // Continue to the next chunk
+			}
+
+			// Upsert the chunk to the vector store.
+			if err := env.VectorStore.Upsert(ctx, chunk, vector); err != nil {
+				log.Printf("Failed to upsert chunk %s: %v", chunk.DocumentID, err)
+				// Decide if one failed chunk should fail the whole request.
+				// For now, we'll log and continue.
+			}
+		}
+		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		http.Error(w, "Failed to store document", http.StatusInternalServerError)
-		log.Printf("Failed to store document: %v", err)
+		http.Error(w, "Failed to store document and chunks", http.StatusInternalServerError)
+		log.Printf("Error during storage: %v", err)
 		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Record stored successfully"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Document chunked and stored successfully"})
 }
 
 func (env *Env) QueryHandler(w http.ResponseWriter, r *http.Request) {

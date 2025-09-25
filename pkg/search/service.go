@@ -2,7 +2,9 @@ package search
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/chr1sbest/hybrid-search/pkg/embeddings"
 	"github.com/chr1sbest/hybrid-search/pkg/ranking"
 	"github.com/chr1sbest/hybrid-search/pkg/storage"
 	"golang.org/x/sync/errgroup"
@@ -10,33 +12,40 @@ import (
 
 // SearchService orchestrates hybrid search operations.
 type SearchService struct {
-	vectorStore storage.VectorStore
-	textStore   storage.TextStore
+	embeddingClient embeddings.EmbeddingClient
+	vectorStore     storage.VectorStore
+	textStore       storage.TextStore
 }
 
 // NewSearchService creates a new SearchService.
-func NewSearchService(vectorStore storage.VectorStore, textStore storage.TextStore) *SearchService {
+func NewSearchService(embeddingClient embeddings.EmbeddingClient, vectorStore storage.VectorStore, textStore storage.TextStore) *SearchService {
 	return &SearchService{
-		vectorStore: vectorStore,
-		textStore:   textStore,
+		embeddingClient: embeddingClient,
+		vectorStore:     vectorStore,
+		textStore:       textStore,
 	}
 }
 
 // Search performs a hybrid search across the vector and text stores and re-ranks the results.
 func (s *SearchService) Search(ctx context.Context, query string, topK int) ([]storage.Document, error) {
+	// 1. Create the vector embedding for the query.
+	queryVector, err := s.embeddingClient.CreateEmbedding(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create query embedding: %w", err)
+	}
+
+	// 2. Concurrently search the vector and text stores.
 	var vectorResults []storage.SearchResult
 	var textResults []storage.SearchResult
 
 	g, ctx := errgroup.WithContext(ctx)
 
-	// Concurrently search the vector store
 	g.Go(func() error {
 		var err error
-		vectorResults, err = s.vectorStore.Query(ctx, query, topK)
+		vectorResults, err = s.vectorStore.Query(ctx, query, queryVector, topK)
 		return err
 	})
 
-	// Concurrently search the text store
 	g.Go(func() error {
 		var err error
 		textResults, err = s.textStore.Search(ctx, query, topK)
