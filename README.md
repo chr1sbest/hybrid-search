@@ -99,6 +99,11 @@ The application is designed with a clean separation of concerns using Go interfa
 
 To improve performance, the application queries both the text and vector stores **concurrently** using an `errgroup`. This means the total time for the search phase is determined by the *slower* of the two datastores, not the sum of both.
 
+### Future Improvements
+
+1. Swap ElasticSearch for something lighter and add persistence
+2. Use our own embeddings instead of integrated Pinecone embeddings
+
 ### Project Structure
 
 ```
