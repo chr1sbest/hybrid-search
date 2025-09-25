@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/chr1sbest/hybrid-search/api"
 	"github.com/chr1sbest/hybrid-search/pkg/embeddings"
 	"github.com/chr1sbest/hybrid-search/pkg/handlers"
 	"github.com/chr1sbest/hybrid-search/pkg/search"
 	"github.com/chr1sbest/hybrid-search/pkg/storage"
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -50,11 +53,18 @@ func main() {
 		SearchService:   searchService,
 	}
 
-	http.HandleFunc("/store", env.StoreHandler)
-	http.HandleFunc("/query", env.QueryHandler)
+	// Create the router from the generated OpenAPI spec.
+	// Our Env struct implements the api.ServerInterface.
+	router := api.Handler(env)
+
+	// Add some middleware for logging and recovery.
+	chiRouter := chi.NewRouter()
+	chiRouter.Use(middleware.Logger)
+	chiRouter.Use(middleware.Recoverer)
+	chiRouter.Mount("/", router)
 
 	log.Println("Server starting on port 8080...")
-	if err := http.ListenAndServe(":8080", nil); err != nil {
+	if err := http.ListenAndServe(":8080", chiRouter); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
 }

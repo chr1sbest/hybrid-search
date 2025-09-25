@@ -2,9 +2,7 @@
 
 This project is a Go application that demonstrates a complete, end-to-end **Hybrid Search** system. It combines the strengths of traditional keyword-based search (lexical search) with modern vector-based search (semantic search) to provide more relevant and context-aware results.
 
-This is a common pattern in modern search systems and a great topic for a system design interview.
-
-## Key System Design Concepts
+## Key  Concepts
 
 ### 1. Hybrid Search
 
