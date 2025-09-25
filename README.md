@@ -34,10 +34,10 @@ This project is a Go application that demonstrates a complete, end-to-end hybrid
     The entire application stack (Go service and Elasticsearch) is managed with Docker Compose.
 
     ```sh
-    docker-compose up --build
+    docker compose up --build
     ```
 
-    This command will build the application image, start the services, and stream the logs to your terminal. You can run it in the background with `docker-compose up -d`.
+    This command will build the application image, start the services, and stream the logs to your terminal. You can run it in the background with `docker compose up -d`.
 
 ## Development
 
@@ -46,13 +46,10 @@ This project uses a `Makefile` to streamline common development tasks.
 | Command           | Description                                                              |
 | ----------------- | ------------------------------------------------------------------------ |
 | `make` / `make all` | Tidy modules, generate code, and vendor dependencies.                    |
-| `make run`          | Start the HTTP server.                                                   |
+| `make docker`       | Build and run the application stack using Docker Compose.                |
 | `make test`         | Run all unit tests.                                                      |
 | `make generate`     | Generate Go code from the OpenAPI specification (`api/spec.yaml`).       |
 | `make mocks`        | Generate mock implementations for all service interfaces.                |
-| `make tidy`         | Run `go mod tidy`.                                                       |
-| `make vendor`       | Run `go mod vendor`.                                                     |
-| `make docs`         | Open the interactive API documentation in your browser.                  |
 
 ## API Documentation
 

@@ -1,14 +1,9 @@
 # Makefile for the Hybrid Search API project
 
-.PHONY: all run generate mocks test tidy vendor docs docker
+.PHONY: all generate mocks test docker
 
-# Default target: cleans up, generates code, and vendors dependencies.
-all: tidy generate vendor
-
-# Run the main application.
-run:
-	@echo "Starting server..."
-	go run cmd/app/main.go
+# Default target: generates code and mocks.
+all: generate mocks
 
 # Generate Go code from the OpenAPI specification.
 generate:
@@ -28,22 +23,7 @@ test:
 	@echo "Running tests..."
 	go test ./...
 
-# Tidy Go modules.
-tidy:
-	@echo "Tidying Go modules..."
-	go mod tidy
-
-# Vendor dependencies.
-vendor:
-	@echo "Vendoring dependencies..."
-	go mod vendor
-
-# Open the API documentation in the browser.
-docs:
-	@echo "Opening API documentation..."
-	open http://localhost:8080/docs
-
 # Run the application using Docker Compose.
 docker:
 	@echo "Starting services with Docker Compose..."
-	docker-compose up --build
+	docker compose up --build
