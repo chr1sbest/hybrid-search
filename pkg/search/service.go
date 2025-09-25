@@ -10,7 +10,13 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
+// Service defines the interface for search operations.
+type Service interface {
+	Search(ctx context.Context, query string, topK int) ([]storage.Document, error)
+}
+
 // SearchService orchestrates hybrid search operations.
+// It implements the Service interface.
 type SearchService struct {
 	embeddingClient embeddings.EmbeddingClient
 	vectorStore     storage.VectorStore

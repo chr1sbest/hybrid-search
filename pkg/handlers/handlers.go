@@ -19,7 +19,7 @@ type Env struct {
 	EmbeddingClient embeddings.EmbeddingClient
 	VectorStore     storage.VectorStore
 	TextStore       storage.TextStore
-	SearchService   *search.SearchService
+	SearchService   search.Service
 }
 
 // StoreDocument handles the POST /store endpoint.
