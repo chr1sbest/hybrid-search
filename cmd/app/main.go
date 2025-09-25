@@ -21,13 +21,15 @@ func main() {
 	// Load environment variables from .env file
 	err := godotenv.Load()
 	if err != nil {
-		log.Println("No .env file found, using environment variables")
+		// This is a normal and expected condition when running in a containerized environment
+		// where environment variables are injected directly.
+		log.Println("No .env file found, relying on environment variables.")
 	}
 
-	pineconeAPIKey := os.Getenv("PINECONE_API_KEY")
-	pineconeIndexName := "semantic-search-api"
-	elasticAddress := "http://localhost:9200"
-	elasticIndexName := "go-semantic-search"
+	pineconeAPIKey := getEnv("PINECONE_API_KEY", "")
+	pineconeIndexName := getEnv("PINECONE_INDEX_NAME", "semantic-search-api")
+	elasticAddress := getEnv("ELASTICSEARCH_ADDRESS", "http://localhost:9200")
+	elasticIndexName := getEnv("ELASTICSEARCH_INDEX", "go-semantic-search")
 
 	ctx := context.Background()
 
@@ -84,4 +86,12 @@ func main() {
 	if err := http.ListenAndServe(":8080", chiRouter); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
+}
+
+// getEnv reads an environment variable or returns a default value.
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+	return fallback
 }

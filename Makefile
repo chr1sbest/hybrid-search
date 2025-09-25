@@ -1,6 +1,6 @@
 # Makefile for the Hybrid Search API project
 
-.PHONY: all run generate mocks test tidy vendor docs
+.PHONY: all run generate mocks test tidy vendor docs docker
 
 # Default target: cleans up, generates code, and vendors dependencies.
 all: tidy generate vendor
@@ -42,3 +42,8 @@ vendor:
 docs:
 	@echo "Opening API documentation..."
 	open http://localhost:8080/docs
+
+# Run the application using Docker Compose.
+docker:
+	@echo "Starting services with Docker Compose..."
+	docker-compose up --build

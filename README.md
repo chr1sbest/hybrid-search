@@ -12,12 +12,15 @@ This project is a Go application that demonstrates a complete, end-to-end hybrid
 
 ### Setup
 
-1.  **Start Dependencies**:
+1.  **Start Services**:
+
+    The entire application stack (Go service and Elasticsearch) is managed with Docker Compose.
 
     ```sh
-    # Start Elasticsearch in a Docker container
-    docker run -d --rm -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.14.1
+    docker-compose up --build
     ```
+
+    This command will build the application image, start the services, and stream the logs to your terminal. You can run it in the background with `docker-compose up -d`.
 
 2.  **Configure Environment**:
 
@@ -28,21 +31,6 @@ This project is a Go application that demonstrates a complete, end-to-end hybrid
     PINECONE_API_KEY="YOUR_API_KEY_HERE"
     ```
 
-3.  **Build and Run**:
-
-    The project is managed via a `Makefile`. To set up the project, run the default target:
-
-    ```sh
-    make
-    ```
-
-    This will tidy dependencies, generate code, and vendor all packages. Then, to start the server:
-
-    ```sh
-    make run
-    ```
-
-    The server will start on `http://localhost:8080`.
 
 ## Development
 
