@@ -15,7 +15,8 @@ COPY . .
 # Build the application
 # CGO_ENABLED=0 is important for a static binary
 # -o /app/server builds the binary into the /app directory
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/server ./cmd/app
+# --mount=type=cache... provides a persistent cache for Go modules and build artifacts
+RUN --mount=type=cache,target=/go/pkg/mod --mount=type=cache,target=/root/.cache/go-build CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o /app/server ./cmd/app
 
 # Stage 2: Create the final, minimal image
 FROM gcr.io/distroless/static-debian11
