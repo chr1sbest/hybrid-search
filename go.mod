@@ -12,6 +12,7 @@ require (
 	github.com/oapi-codegen/runtime v1.1.1
 	github.com/pinecone-io/go-pinecone/v4 v4.0.0
 	github.com/stretchr/testify v1.11.1
+	github.com/swaggest/swgui v1.8.4
 	github.com/tmc/langchaingo v0.1.13
 	golang.org/x/sync v0.17.0
 )
@@ -28,6 +29,7 @@ require (
 	github.com/pkoukk/tiktoken-go v0.1.6 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/stretchr/objx v0.5.2 // indirect
+	github.com/vearutop/statigz v1.4.0 // indirect
 	gitlab.com/golang-commonmark/html v0.0.0-20191124015941-a22733972181 // indirect
 	gitlab.com/golang-commonmark/linkify v0.0.0-20191026162114-a0c2df6c8f82 // indirect
 	gitlab.com/golang-commonmark/markdown v0.0.0-20211110145824-bf3e522c626a // indirect

@@ -1,137 +1,129 @@
-# Hybrid Search with Reciprocal Rank Fusion (RRF)
+# Hybrid Search API
 
-This project is a Go application that demonstrates a complete, end-to-end **Hybrid Search** system. It combines the strengths of traditional keyword-based search (lexical search) with modern vector-based search (semantic search) to provide more relevant and context-aware results.
+This project is a Go application that demonstrates a complete, end-to-end hybrid search system. It combines keyword-based (lexical) and vector-based (semantic) search to provide highly relevant results, using Reciprocal Rank Fusion (RRF) to merge the result sets.
 
-## Key  Concepts
+## Getting Started
 
-### 1. Hybrid Search
+### Prerequisites
 
-**What is it?**
+- Go (1.24+)
+- Docker
+- A [Pinecone API Key](https://app.pinecone.io/)
+
+### Setup
+
+1.  **Start Dependencies**:
+
+    ```sh
+    # Start Elasticsearch in a Docker container
+    docker run -d --rm -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.14.1
+    ```
+
+2.  **Configure Environment**:
+
+    Create a `.env` file in the project root:
+
+    ```sh
+    # .env
+    PINECONE_API_KEY="YOUR_API_KEY_HERE"
+    ```
+
+3.  **Build and Run**:
+
+    The project is managed via a `Makefile`. To set up the project, run the default target:
+
+    ```sh
+    make
+    ```
+
+    This will tidy dependencies, generate code, and vendor all packages. Then, to start the server:
+
+    ```sh
+    make run
+    ```
+
+    The server will start on `http://localhost:8080`.
+
+## Development
+
+This project uses a `Makefile` to streamline common development tasks.
+
+| Command           | Description                                                              |
+| ----------------- | ------------------------------------------------------------------------ |
+| `make` / `make all` | Tidy modules, generate code, and vendor dependencies.                    |
+| `make run`          | Start the HTTP server.                                                   |
+| `make test`         | Run all unit tests.                                                      |
+| `make generate`     | Generate Go code from the OpenAPI specification (`api/spec.yaml`).       |
+| `make mocks`        | Generate mock implementations for all service interfaces.                |
+| `make tidy`         | Run `go mod tidy`.                                                       |
+| `make vendor`       | Run `go mod vendor`.                                                     |
+| `make docs`         | Open the interactive API documentation in your browser.                  |
+
+## API Documentation
+
+Once the server is running (`make run`), interactive API documentation is available at:
+
+**[http://localhost:8080/docs](http://localhost:8080/docs)**
+
+This documentation is served directly from the application and provides a UI for exploring and interacting with the API endpoints.
+
+---
+
+## System Design & Architecture
+
+The following sections provide a deeper dive into the core concepts and architectural decisions behind this project.
+
+### Key Concepts
+
+#### 1. Hybrid Search
+
 Hybrid search is an approach that merges the results from two distinct types of search engines:
 
-- **Lexical Search (Keyword-based)**: This is the traditional search method that looks for exact keyword matches. It's fast, precise, and excellent for finding documents that contain specific terms.
-  - *Implementation*: `Elasticsearch`
+-   **Lexical Search (Keyword-based)**: This is the traditional search method that looks for exact keyword matches. It's fast, precise, and excellent for finding documents that contain specific terms. Implemented here with `Elasticsearch`.
+-   **Semantic Search (Vector-based)**: This method searches based on the *meaning* or *intent* behind a query, not just the keywords. It uses vector embeddings to find documents that are contextually similar. Implemented here with `Pinecone`.
 
-- **Semantic Search (Vector-based)**: This method searches based on the *meaning* or *intent* behind a query, not just the keywords. It uses vector embeddings to find documents that are contextually similar.
-  - *Implementation*: `Pinecone`
+By combining both, you get the precision of lexical search and the contextual understanding of semantic search.
 
-**Why use it?**
-By combining both, you get the best of both worlds: the precision of lexical search and the contextual understanding of semantic search. A query for "how to fix a flat tire" will match documents with those exact words (thanks to Elasticsearch) as well as documents that talk about "patching a rubber tube" or "inflating a wheel" (thanks to Pinecone).
+#### 2. Reciprocal Rank Fusion (RRF)
 
-### 2. Reciprocal Rank Fusion (RRF)
-
-**What is it?**
-Once you have two different sets of search results, you need a way to combine them into a single, coherent list. RRF is a simple and powerful algorithm for this.
-
-It works by looking at the *rank* of a document in each result list, not its score. The formula for a document's RRF score is:
+Once you have two different sets of search results, you need a way to combine them into a single, coherent list. RRF is a simple and powerful, score-agnostic algorithm for this. It works by looking at the *rank* of a document in each result list, not its absolute score. The formula for a document's RRF score is:
 
 ```
 RRF_Score = Σ (1 / (k + rank_i))
 ```
 
-- `rank_i` is the document's rank in result set `i`.
-- `k` is a constant (we use `60` in this project) that diminishes the impact of lower-ranked items.
+-   `rank_i` is the document's rank in result set `i`.
+-   `k` is a constant (we use `60` in this project) that diminishes the impact of lower-ranked items.
 
-**Why use it?**
-- **Score-Agnostic**: Different search systems produce scores on different scales. RRF elegantly sidesteps the need to normalize these scores.
-- **Rewards Prominence**: It gives significant weight to documents that appear at the top of *any* list, assuming that a top result from any system is likely to be highly relevant.
+#### 3. Document Chunking
 
-### 3. Document Chunking for Large Texts
+Embedding models have a fixed context window. To handle large documents, we first split them into smaller, semantically coherent pieces called **chunks** using a `RecursiveCharacter` text splitter. This improves search relevance by allowing a user's query to match against a focused chunk of text rather than a diluted vector representing the entire document.
 
-**What is it?**
-Embedding models have a fixed context window, meaning they can only process a certain amount of text at once. To handle large documents, we first split them into smaller, semantically coherent pieces called **chunks**.
+#### 4. Pluggable Architecture
 
-- **Implementation**: We use the `RecursiveCharacter` text splitter from the `langchaingo` library, a robust implementation of a common and effective chunking algorithm.
+The application is designed with a clean separation of concerns using Go interfaces (`EmbeddingClient`, `VectorStore`, `TextStore`, and `Service`). This makes the system extensible, allowing components like `Pinecone` or `Elasticsearch` to be easily swapped with other implementations.
 
-**Why use it?**
-Chunking improves search relevance. Instead of a single, diluted vector for a large document, we get multiple, focused vectors for each chunk. A specific user query for "how to change a headlight bulb" will have a much stronger match with a specific chunk about headlights than with a general vector for an entire car maintenance manual.
+#### 5. Concurrent Operations
 
-### 4. Pluggable Architecture with Interfaces
+To improve performance, the application queries both the text and vector stores **concurrently** using an `errgroup`. This means the total time for the search phase is determined by the *slower* of the two datastores, not the sum of both.
 
-The application is designed with a clean separation of concerns using Go interfaces (`EmbeddingClient`, `VectorStore`, and `TextStore`).
-
-- `search_service.go` orchestrates the search, but it doesn't know or care *which* vector database or text engine is being used. It only knows about the interfaces.
-- This makes the system **extensible**. You can easily swap `Pinecone` for another vector DB like `Weaviate`, `Elasticsearch` for `OpenSearch`, or the internal embedding model for an external one like `OpenAI` by simply creating a new client that satisfies the appropriate interface.
-
-### 5. Concurrent Operations
-
-To improve performance, the application queries both Elasticsearch and Pinecone **concurrently** using an `errgroup`. This means the total time for the search phase is determined by the *slower* of the two datastores, not the sum of both.
-
-## Project Structure
+### Project Structure
 
 ```
 .
-├── cmd/app/
-│   └── main.go              # Application entrypoint
+├── api/                      # OpenAPI specification and generated code
+├── cmd/app/                  # Application entrypoint
 ├── pkg/
-│   ├── chunker/
-│   │   └── chunker.go       # Text chunking logic
-│   ├── embeddings/
-│   │   └── embeddings.go    # Embedding client interface
-│   ├── handlers/
-│   │   └── handlers.go      # HTTP handlers
-│   ├── ranking/
-│   │   └── ranking.go       # RRF implementation
-│   ├── search/
-│   │   └── service.go       # Hybrid search orchestration
-│   └── storage/
-│       ├── elasticsearch.go # Elasticsearch client
-│       ├── pinecone.go      # Pinecone client
-│       ├── stores.go        # Store interfaces
-│       └── models.go        # Core data models
+│   ├── chunker/            # Text chunking logic
+│   ├── embeddings/         # Embedding client interface and mocks
+│   ├── handlers/           # HTTP handlers and tests
+│   ├── ranking/            # RRF implementation
+│   ├── search/             # Hybrid search orchestration, service, and mocks
+│   └── storage/            # Storage interfaces, clients, and mocks
 ├── .env
 ├── .gitignore
+├── Makefile                  # Development commands
 ├── go.mod
 ├── go.sum
 └── README.md
-```
-
-## How to Run This Project
-
-### Prerequisites
-
-- **Go** (version 1.18+)
-- **Docker**
-- A **Pinecone API Key**
-
-### 1. Start Elasticsearch
-
-This project uses Docker to run an Elasticsearch instance locally. The `xpack.security.enabled=false` flag is for convenience in a local development environment.
-
-```sh
-docker run -p 9200:9200 -p 9300:9300 -e "discovery.type=single-node" -e "xpack.security.enabled=false" docker.elastic.co/elasticsearch/elasticsearch:8.14.1
-```
-
-### 2. Create a .env File
-
-Create a `.env` file in the root of the project and add your Pinecone API key. You can get one from the [Pinecone console](https://app.pinecone.io/).
-
-```
-# .env
-PINECONE_API_KEY="YOUR_API_KEY_HERE"
-```
-
-### 3. Run the Go Application
-
-```sh
-go mod tidy
-go run ./cmd/app
-```
-
-The server will start on `http://localhost:8080`.
-
-### 4. Use the API
-
-**Store a Document:**
-
-```sh
-curl -X POST http://localhost:8080/store \
--H "Content-Type: application/json" \
--d '{"text": "Reciprocal Rank Fusion is a powerful way to combine search results."}'
-```
-
-**Query for a Document:**
-
-```sh
-curl -X GET "http://localhost:8080/query?q=search%20results"
 ```

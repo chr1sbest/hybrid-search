@@ -14,6 +14,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
+	"github.com/swaggest/swgui/v5emb"
 )
 
 func main() {
@@ -63,7 +64,23 @@ func main() {
 	chiRouter.Use(middleware.Recoverer)
 	chiRouter.Mount("/", router)
 
+	// Add Swagger UI endpoint for API documentation
+	spec, err := os.ReadFile("api/spec.yaml")
+	if err != nil {
+		log.Fatalf("Failed to read OpenAPI spec: %v", err)
+	}
+
+	swguiHandler := v5emb.New("Hybrid Search API", "/docs/openapi.yaml", "/docs")
+	chiRouter.Mount("/docs", swguiHandler)
+
+	// Add endpoint to serve the spec file itself
+	chiRouter.Get("/docs/openapi.yaml", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/x-yaml")
+		w.Write(spec)
+	})
+
 	log.Println("Server starting on port 8080...")
+	log.Println("API documentation available at http://localhost:8080/docs")
 	if err := http.ListenAndServe(":8080", chiRouter); err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}

@@ -1,6 +1,6 @@
 # Makefile for the Hybrid Search API project
 
-.PHONY: all run generate mocks test tidy vendor
+.PHONY: all run generate mocks test tidy vendor docs
 
 # Default target: cleans up, generates code, and vendors dependencies.
 all: tidy generate vendor
@@ -37,3 +37,8 @@ tidy:
 vendor:
 	@echo "Vendoring dependencies..."
 	go mod vendor
+
+# Open the API documentation in the browser.
+docs:
+	@echo "Opening API documentation..."
+	open http://localhost:8080/docs
